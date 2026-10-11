@@ -60,7 +60,7 @@ class AgentEscrow(gl.Contract):
                       "Return JSON only with decision ACCEPT, REVISION, or REJECT; score 0-100; concise summary; "
                       "and missing list. Use REJECT only when the delivery is unusable.\nINSTRUCTIONS:\n" + record["instructions"] +
                       "\nBRIEF:\n" + bodies[0] + "\nDELIVERABLE:\n" + bodies[1] + "\nACCEPTANCE POLICY:\n" + bodies[2])
-            return parse_review(gl.nondet.exec_prompt(prompt).strip())
+            return {**parse_review(gl.nondet.exec_prompt(prompt).strip()), "digests": [digest(v) for v in bodies]}
         def validate(leader_result):
             if not isinstance(leader_result, gl.vm.Return): return False
             own = run()
@@ -68,11 +68,12 @@ class AgentEscrow(gl.Contract):
             return leader["decision"] == own["decision"] and abs(int(leader["score"]) - int(own["score"])) <= 15
         result = gl.vm.run_nondet_unsafe(run, validate)
         bodies = captured["bodies"]
-        record.update({"decision": result["decision"], "score": result["score"], "summary": result["summary"], "missing": result["missing"], "digests": [digest(v) for v in bodies], "state": {"ACCEPT": "ACCEPTED", "REVISION": "REVISION", "REJECT": "REJECTED"}[result["decision"]]})
+        record.update({"decision": result["decision"], "score": result["score"], "summary": result["summary"], "missing": result["missing"], "digests": result["digests"], "state": {"ACCEPT": "ACCEPTED", "REVISION": "REVISION", "REJECT": "REJECTED"}[result["decision"]]})
         self.jobs[key] = json.dumps(record, sort_keys=True, separators=(",", ":"))
 
     @gl.public.view
     def get_job(self, owner: str, job_id: str) -> str: return self.jobs.get(self._key(owner, job_id), "{}")
+
 
 
 
