@@ -51,23 +51,27 @@ class AgentEscrow(gl.Contract):
     def review_delivery(self, job_id: str) -> None:
         key = self._key(gl.message.sender_address, job_id); record = json.loads(self.jobs.get(key, "{}"))
         if not record or record["state"] != "OPEN": raise gl.vm.UserError("job is not open")
-        captured = {}
         def run():
-            bodies = [gl.nondet.web.get(u).body.decode("utf-8") for u in (record["brief"], record["deliverable"], record["acceptance"])]
-            if any(not 2 <= len(v) <= 120000 for v in bodies): raise gl.vm.UserError("evidence unavailable")
-            captured["bodies"] = bodies
+            try:
+                bodies = [gl.nondet.web.get(u).body.decode("utf-8") for u in (record["brief"], record["deliverable"], record["acceptance"])]
+                if any(not 2 <= len(v) <= 120000 for v in bodies): raise gl.vm.UserError("evidence unavailable")
+            except Exception:
+                return {"decision": "REVISION", "score": 0, "summary": "Evidence could not be fetched consistently.", "missing": ["reachable brief, deliverable, and acceptance sources"], "digests": []}
             prompt = ("Review an autonomous agent delivery against the supplied brief and acceptance policy. "
                       "Return JSON only with decision ACCEPT, REVISION, or REJECT; score 0-100; concise summary; "
                       "and missing list. Use REJECT only when the delivery is unusable.\nINSTRUCTIONS:\n" + record["instructions"] +
                       "\nBRIEF:\n" + bodies[0] + "\nDELIVERABLE:\n" + bodies[1] + "\nACCEPTANCE POLICY:\n" + bodies[2])
-            return {**parse_review(gl.nondet.exec_prompt(prompt).strip()), "digests": [digest(v) for v in bodies]}
+            try:
+                reviewed = parse_review(gl.nondet.exec_prompt(prompt).strip())
+            except Exception:
+                reviewed = {"decision": "REVISION", "score": 0, "summary": "Validator output was not machine-readable.", "missing": ["structured validator review"]}
+            return {**reviewed, "digests": [digest(v) for v in bodies]}
         def validate(leader_result):
             if not isinstance(leader_result, gl.vm.Return): return False
             own = run()
             leader = leader_result.calldata
             return leader["decision"] == own["decision"] and abs(int(leader["score"]) - int(own["score"])) <= 15
         result = gl.vm.run_nondet_unsafe(run, validate)
-        bodies = captured["bodies"]
         record.update({"decision": result["decision"], "score": result["score"], "summary": result["summary"], "missing": result["missing"], "digests": result["digests"], "state": {"ACCEPT": "ACCEPTED", "REVISION": "REVISION", "REJECT": "REJECTED"}[result["decision"]]})
         self.jobs[key] = json.dumps(record, sort_keys=True, separators=(",", ":"))
 

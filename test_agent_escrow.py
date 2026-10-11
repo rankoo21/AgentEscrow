@@ -15,6 +15,7 @@ def test_distinct_and_replay_guards(e):
  with pytest.raises(U): c.open_job('x','https://same.example/a','https://same.example/b','https://third.example/c','long enough instructions here')
  c.open_job('JOB-2','https://a.example/a','https://b.example/b','https://c.example/c','long enough instructions here')
  b.extend(['x','y','z'])
- with pytest.raises(U): c.review_delivery('JOB-2')
+ c.review_delivery('JOB-2')
+ assert json.loads(c.get_job('0xowner','JOB-2'))['state']=='REVISION'
 
 
