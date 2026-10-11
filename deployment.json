@@ -1,8 +1,8 @@
 {
-  "name": "AgentEscrowV2",
-  "address": "0x3187D4485E9efBd5cCb483B043423851aC69d005",
-  "transaction": "0x68df4847d66ac9a69114f8ba5b469655503d08de37c6100ab2a5763de270df4b",
-  "source_sha256": "9949c4a86aa1947f6c017a6557847a376a6023353755cb71197eaccef9928716",
+  "name": "AgentEscrowV3",
+  "address": "0x68C818c8E957D03A44d3B1a260F9df765cdDB35E",
+  "transaction": "0x8df8a6fac0666657b27b7fda08d704e86cc3f87691dd8a8f0cff48b326bc296f",
+  "source_sha256": "c4c0023451113dfce54dd7342572e8c2b7dc594844731d664bfde983809803e9",
   "network": "studionet",
   "source_verified": true
 }
